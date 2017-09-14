@@ -1,0 +1,355 @@
+Content-Type: text/x-zim-wiki
+Wiki-Format: zim 0.4
+Creation-Date: 2017-09-14T16:21:31+02:00
+
+====== Chapter 2 ======
+Created Thursday 14 September 2017
+**On To OpenGL and 3D Computer Graphics**
+
+We are going to gain insight into
+* The synthetic-camera model to record 3D scenes which [[OpenGL]] implements
+* The approach to approximating curved objects, such as circles ans spheres with the help of straight and flat geometric primitives, such as line segments and triangles, which is fundamental to object design in computer graphics
+
+==== 2.1 First program ====
+Running square.cpp
+The following statements create the square
+{{{code: lang="glsl" linenumbers="True"
+   // Draw a polygon with specified vertices.
+   glBegin(GL_POLYGON);
+      glVertex3f(20.0, 20.0, 0.0);
+      glVertex3f(80.0, 20.0, 0.0);
+      glVertex3f(80.0, 80.0, 0.0);
+      glVertex3f(20.0, 80.0, 0.0);
+   glEnd();
+}}}
+
+But those are legacy code, even though they can be accesed from [[OpenGL]] 4.3 via the compatibility profile.
+The corners of the square are specified by the four vertex declaration statements between glBegin and glEnd.
+
+In the example, the axes are oriented as in the picture
+{{.\pasted_image.png}}
+The coordinates of each vertex are represented this way
+{{{code: lang="glsl" linenumbers="True"
+glVertex3f(x, y, z);
+}}}
+
+
+But even though opengl allows us to create 3d objects in a 3 dimensional world, those objects are rendered to a 2-dimensional part of the computer screen inside the rectangular opengl window.
+
+==== 2.2 Orthographic projection, viewing box and world coordinates ====
+Changing the call below it is seen that the size and the proportion of the window change
+{{{code: lang="glsl" linenumbers="True"
+//glutInitWindowSize(500, 500);
+glutInitWindowSize(250, 500);
+}}}
+
+glOrtho determines the viewing box inside which the program draws, and it generally has the following structure: 
+{{{code: lang="glsl" linenumbers="True"
+// determines an imaginary viewing box inside which the program draws
+glOrtho(0.0, 100.0, 0.0, 100.0, -1.0, 1.0);
+// generally glOrtho(left, right, bottom, top, near, far);
+}}}
+
+(left, bottom, -near), (right, bottom, -near), (left, top, -near), (right, top, -near), (left, bottom, -far), (right, bottom, -far),
+(left, top,- far), (right, top,- far)
+{{.\pasted_image001.png}}
+In [[OpenGL,]] the near and far values are flipped in sign.
+Now, that we understand what glOrtho does, it is possible to show how the square is represented inside the viewing box, using the figure 2.6
+{{.\pasted_image002.png}}
+The rendering process takes 2 steps
+1. **Shoot: **Objects are projected perpendicularly onto the front face of the viewing box as in figure 2.6(b). The fron t face of the viewing box is called **viewing face** and the plane on which it lies the **viewing plane. **
+2. **Print:** The viewing face is proportionately scaled to fit the regular [[OpenGL]] window. This is like printing the film on paper
+{{.\pasted_image003.png}}
+So, changing the aspect ration in the function gluInitWindowSize → will actually change the shape of our square as it is shown in the figure 2.7
+
+=== Fixed worls system ===
+So the idea es to initialize a rectangular right-handed coordinate system locatee wherever we want but with the axes all calibrated identically, anda call the units along the axis just //units// and leave the system **fixed forever**. Refer to this as **world coordinate system**
+{{{code: lang="glsl" linenumbers="True"
+// Experiment 2.3
+//glOrtho(0.0, 100.0, 0.0, 100.0, -1.0, 1.0);
+glOrtho(-100.0, 100.0, -100.0, 100.0, -1.0, 1.0);
+
+//Changing this our system starts at -100 on the left and -100 on the right. This way
+// the viewing  box is bigger and as a result, the square is smaller inside the oppengl window
+
+}}}
+ 
+{{.\pasted_image004.png}}
+{{{code: lang="glsl" linenumbers="True"
+///Exercice 2.2
+// the box is smaller and closer to the bottom-left corner
+glOrtho(0.0, 200.0, 0.0, 200.0, -1.0, 1.0); 
+// The box fills the whole window
+glOrtho(20.0, 80.0, 20.0, 80.0, -1.0, 1.0);
+// the box looks the same because there view is orthogonal and 
+// here we only change the near and far planes
+glOrtho(0.0, 100.0, 0.0, 100.0, -2.0, 5.0);
+}}}
+
+{{{code: lang="glsl" linenumbers="True"
+///Exercice 2.4
+// Extending the viewing box to the left 100 unitx we can obtain a square
+glOrtho(-100.0, 100.0, 0.0, 100.0, -1.0, 1.0);
+}}}
+
+
+==== 2.3 The openGL window and Screen coordinates ====
+{{{code: lang="glsl" linenumbers="True"
+// defines the window in (width, height)
+glutInitWindowSize(500, 500);
+// defines the initial position of the window in the screen
+// the top left corner is the position 0,0
+glutInitWindowPosition(100, 100); 
+}}}
+
+{{.\pasted_image005.png}}
+
+==== 2.4 Clipping ====
+When an object is defined outside the viewing box it is not rendered. If we define a second square outside the viewing box we won't be able to see it. A more dramatical example, if we convert the square in a triangle using the following code
+{{{code: lang="glsl" linenumbers="True"
+glBegin(GL_POLYGON);
+  glVertex3f(20.0, 20.0, 0.0);
+  glVertex3f(80.0, 20.0, 0.0);
+  glVertex3f(80.0, 80.0, 0.0);
+glEnd();
+}}}
+
+And then, we change the Z component of the first vertex with the following code
+{{{code: lang="glsl" linenumbers="True"
+glVertex3f(20.0, 20.0, 5.0);
+}}}
+
+Our triangle won't look as a triangle. Check the explanation in the figure 2.15
+{{.\pasted_image006.png}}
+
+==== 2.5 Color, OpenGL state machine and interpolation ====
+The colors of the square are defined in the function
+{{{code: lang="glsl" linenumbers="True"
+glColor3f(Red, Green, Blue);
+}}}
+
+The following table shows a combination of colors, the smaller the number, the darker the color
+{{.\pasted_image007.png}}
+We can mix colors in vertex, check the following code
+{{{code: lang="glsl" linenumbers="True"
+   glBegin(GL_POLYGON);
+	glColor3f(1.0, 0.0, 0.0);
+	glVertex3f(20.0, 20.0, 0.0);
+	glColor3f(0.0, 1.0, 0.0);
+	glVertex3f(80.0, 20.0, 0.0);
+	glColor3f(0.0, 0.0, 1.0);
+	glVertex3f(80.0, 80.0, 0.0);
+	glColor3f(1.0, 1.0, 0.0);
+	glVertex3f(20.0, 80.0, 0.0);
+ glEnd();
+}}}
+
+The resultant square shines like this one
+{{.\pasted_image008.png}}
+
+==== 2.6 OpenGL geometric primitives ====
+Other primitives in [[OpenGL]] are for example points, using the following code
+{{{code: lang="glsl" linenumbers="True"
+   glPointSize(5.0);
+   glBegin(GL_POINTS);
+      glVertex3f(20.0, 20.0, 0.0);
+      glVertex3f(80.0, 20.0, 0.0);
+      glVertex3f(80.0, 80.0, 0.0);
+      glVertex3f(20.0, 80.0, 0.0);
+   glEnd();
+
+}}}
+
+we will see 4 points instead of an square.
+{{.\pasted_image010.png}}
+Using //GL_LINES, //vertex are linked 2 after two, so our image will be 2 parallel lines, one below the second:
+{{.\pasted_image009.png}}
+Using //GL_LINE_STRIP//, vertexs will be linked one after another, this way, the same vertexs will show 3 lines as in the following image
+{{.\pasted_image011.png}}
+//GL_LINE_LOOP //will link all the points
+{{.\pasted_image012.png}}
+
+It is possible to modify the thickness of the lines using //glLineWidth(x);//
+{{.\pasted_image013.png}}
+{{.\pasted_image014.png}}
+{{{code: lang="glsl" linenumbers="True"
+/// Exercice 2.12
+/// draw the figure 2.6 a
+	glBegin(GL_TRIANGLE_STRIP);
+		glVertex3f(20,70,0);	//0
+		glVertex3f(10, 80, 0);	//1
+		glVertex3f(70, 70, 0);	//2
+		glVertex3f(80, 80, 0);	//3
+		glVertex3f(70, 20, 0);	//4
+		glVertex3f(80, 10, 0);	//5
+		glVertex3f(20, 20, 0);	//6
+		glVertex3f(10, 10, 0);	//7
+		glVertex3f(20, 70, 0);	//8
+		glVertex3f(10, 80, 0);	//9
+	glEnd();
+}}}
+
+
+{{{code: lang="glsl" linenumbers="True"
+/// Exercice 2.13
+// Draw the figure 2.6 b
+	glBegin(GL_TRIANGLE_STRIP);
+		glVertex3f(10, 70, 0);	//0
+		glVertex3f(10, 80, 0);	//1
+		glVertex3f(20, 70, 0);	//2
+		glVertex3f(30, 80, 0);	//3
+		glVertex3f(20, 10, 0);	//4
+		glVertex3f(30, 20, 0);	//5
+		glVertex3f(70, 10, 0);	//6
+		glVertex3f(60, 20, 0);	//7
+		glVertex3f(70, 70, 0);	//8
+		glVertex3f(60, 80, 0);	//9
+		glVertex3f(80, 70, 0);	//10
+		glVertex3f(80, 80, 0);	//11
+	glEnd();
+}}}
+
+Vertices order are shown in the following picture
+{{.\pasted_image015.png}}
+
+==== 2.7 Approximating curved objects ====
+Using GL_LINE_LOOP we can draw other figures, like circles
+{{{code: lang="glsl" linenumbers="True"
+   // Draw a line loop with vertices at equal angles apart on a circle
+   // with center at (X, Y) and radius R, The vertices are colored randomly.
+t = 0;
+glBegin(GL_LINE_LOOP);
+  for(i = 0; i < numVertices; ++i)
+  {
+     glColor3f((float)rand()/(float)RAND_MAX, 
+		 (float)rand()/(float)RAND_MAX, 
+		 (float)rand()/(float)RAND_MAX); 
+     glVertex3f(X + R * cos(t), Y + R * sin(t), 0.0);
+     t += 2 * PI / numVertices;
+  }
+glEnd();
+}}}
+
+The equation used is the next one
+x = X + R * cos t
+y = Y + R * sin t
+z = 0
+0 <= t <= 2PI
+where R is the radius, and X, Y the coordinates of the center
+
+NOPE: **The**// length of the perimeter is 2 * PI * R, so if we want to know the size of each part of the perimeter, having the num of vertices, we only need to divide 2 * PI / numVertices.//
+
+2PI rad  is 360º, we divide 2Pi with the number of slices, so we know the num of radians for each slice, then we accumulate the radians in t
+NOTE: cos() and sin() in c++ tale an angle as radians, that is why we use 2PI / numVertices
+{{{code: lang="glsl" linenumbers="True"
+// Exercice 2.17
+float r = R;
+glBegin(GL_LINE_STRIP);
+for (i = 0; i < numVertices; ++i)
+{
+   glColor3f((float)rand() / (float)RAND_MAX,
+	   (float)rand() / (float)RAND_MAX,
+	   (float)rand() / (float)RAND_MAX);
+   glVertex3f(X + r * cos(t), Y + r * sin(t), 0.0);
+   t += 6 * PI / numVertices;
+   r--;
+}
+glEnd();
+}}}
+
+{{{code: lang="glsl" linenumbers="True"
+// Exercice 2.18
+// Polygon circle
+glBegin(GL_POLYGON);
+for (i = 0; i < numVertices; ++i)
+{
+   glColor3f((float)rand() / (float)RAND_MAX,
+	   (float)rand() / (float)RAND_MAX,
+	   (float)rand() / (float)RAND_MAX);
+   glVertex3f(X + R * cos(t), Y + R * sin(t), 0.0);
+   t += 2 * PI / numVertices;
+}
+glEnd();
+
+// Triangle fan circle
+glBegin(GL_TRIANGLE_FAN);
+for (i = 0; i < numVertices; ++i)
+{
+   glColor3f((float)rand() / (float)RAND_MAX,
+	   (float)rand() / (float)RAND_MAX,
+	   (float)rand() / (float)RAND_MAX);
+   glVertex3f(X + R * cos(t), Y + R * sin(t), 0.0);
+   t += 2 * PI / numVertices;
+}
+glEnd();
+
+}}}
+
+
+==== 2.8 Three Dimensions, the Depth Buffer and perspective projection ====
+We can draw a disc with the function{{{code: lang="glsl" linenumbers="True"
+drawDisc(radius, x,y,z);
+}}}
+
+In the experiment 2.20 we can see 3 different circular annuluses
+{{.\pasted_image016.png}}
+* In the upper-left, there are to discs, the red one is bigger, both are in the position 0 of the axes z, but the white disc has been created after, that's why it looks like an annulus
+* The upper right shows 2 discs again, but the red one is farther than the white one
+* The bottom one is made with triangles
+
+=== 2.8.1 A vital 3D utility: The depth buffer ===
+Enabling the depth buffer, also called the z-buffer, causes opengl to eliminate, prior to rendering, parts of objects taht are obscured ( occluded) by others.
+An object, or part of it, it's not drawn if it's projection is obstructed by another object. This utility or process is called **hidden surface removal** or **depth testing**
+{{.\pasted_image017.png}}
+{{{code: lang="glsl" linenumbers="True"
+// clears the buffer
+glClear(GL_DEPTH_BUFFER_BIT);
+
+// enables and disables teh buffer
+glEnable(GL_DEPTH_TEST); // Enable depth testing. 
+glColor3f(1.0, 0.0, 0.0);
+drawDisc(20.0, 75.0, 75.0, 0.0);
+glColor3f(1.0, 1.0, 1.0);
+drawDisc(10.0, 75.0, 75.0, 0.5); // Compare this z-value with that of the red disc.
+glDisable(GL_DEPTH_TEST); // Disable depth testing.
+
+// Initializes the depth buffer
+glutInitDisplayMode(GLUT_DEPTH); 
+}}}
+
+
+=== 2.8.2 A helix and perspective projection ===
+In order to do a projection, instad of having a viewing box, we have a frustum //glFrustum() //which is a truncated pyramid as shown in figure 2.34
+
+{{.\pasted_image018.png}}
+In order to load the viewing frustum instead of the viewing box, we use the following code{{{code: lang="glsl" linenumbers="True"
+//glOrtho(-50.0, 50.0, -50.0, 50.0, 0.0, 100.0);
+//glFrustum(left, right, bottom, top, zNear, zFar);
+glFrustum(-5.0, 5, -5, 5, 5, 100);
+   
+}}}
+
+{{.\pasted_image019.png}}
+{{{code: lang="glsl" linenumbers="True"
+//Exercice 2.25
+// looks the same because we are only moving the far panel
+glFrustum(-5.0, 5, -5, 5, 5, 120);
+
+// here looks like using zoom cause using -10, the viewing face is closer to the spiral
+glFrustum(-5.0, 5, -5, 5, 10, 100);
+
+// the spiral looks smaller, for the same reasining as the previous mode, like a zoom out
+glFrustum(-5.0, 5, -5, 5, 2.5, 100);
+
+// the spiral here looks smaller too, but now because the viewing face is higher and widther
+glFrustum(-10, 10, -10, 10, 5, 100);
+}}}
+
+
+=== 2.9 Drawing Projects ===
+...
+
+=== 2.11 An openGL program end to end ===
+...
+
+

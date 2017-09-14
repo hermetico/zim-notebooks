@@ -1,0 +1,158 @@
+Content-Type: text/x-zim-wiki
+Wiki-Format: zim 0.4
+Creation-Date: 2017-09-08T11:13:05+02:00
+
+====== Single Processor Machines ======
+**Memory hierarchies and Processor Features**
+Created Friday 08 September 2017
+
+===== Motivation =====
+Most applications run at < 10% of the //peak //performance of a system ( peak is the maximum the hardware can physycally execute). The code running on one processor often runs at only 10-20% of the processor peak, and most of a single processor liss is in the memory system. Getting data from main memory takes much longer than arithmetic and logic.
+
+==== Uniprocessors ====
+Processors have:
+* **Registers and cache**: Small memories that store data recently used or located close to the data being used. Caches have different level therefore diferent costs
+* **Parallelism**: Multiple units that can run in parallel where different orders have different costs
+* **Pipelining**: is a different form of parallelism, like an assembly line in a factory
+
+===== Memory hierarchies =====
+Memory hierarchy tries to exploit locality spatial and temporal locality:
+* Spatial locality: accessing things nearby previous accesses
+* Temporal locality: reusing an item that was previously accessed
+
+{{.\pasted_image.png}}
+
+Comparisson between Latency and Bandwidth
+{{.\pasted_image001.png}}
+* Latency is the time we take to get data from memory
+* Bandwith is the amount of data we can get from memory  per second
+
+==== Cache basics ====
+Cache is a fast and expensive memory which keeps copy of data in main memory. It's hidden fro software this **we cannot control cache directly** with code.
+* Cache hit: when we need a value that is already in cache
+* Cache miss: when we need a value that isn't in cache
+* Cache line length: The system does not load one single value from cache but many in each access, it is called **cache line**
+* Associativity: 
+	* Direct: A line of main memory can only be stored in a one line of cache
+	* n-way: A line of main memory can be stored in n different lines of cache
+	* Fully associative: Ay line of main memory can be stored in any line of cache
+
+==== Experiment ====
+Micro benchmark for memory system performance
+
+{{.\pasted_image002.png}}
+
+{{{code: lang="cpp" linenumbers="True"
+int main(int argc, char** argv)
+{
+    int size =  atoi(argv[1]);
+	int *data = (int *) malloc (sizeof(int) * size);
+	int next = 0;
+	int times = 1000;
+    int maxstride = 8388608; // 32MiB
+
+	for(int stride = 1; stride <= maxstride; stride = stride * 2)
+	{
+		for(int t = 0; t <= times; t++)
+		{
+			for(int i = 0; i <= size; i = i + stride)
+				next = data[i];
+		}
+	}
+    free(data);
+}
+
+}}}
+
+The code it's been executed in a Sun Ultra-2i with 333 MHz
+* L1 Cache:
+	* 16KB
+	* 16 byte per line
+	* 2 cycles - 6 nanoseconds
+* L2 Cache:
+	* 2MB
+	* 64 byte per line
+	* 12 cycles - 36 nanoseconds
+* Memory
+	* 132 cycles - 396 nanoseconds
+{{.\pasted_image005.png}}
+From 4MB not everything fits in cache but with an stride less than 64 we still take advantage of the caches, when the stride is higher, every new piece of data we want needs to be picked from main memory.
+
+==== Cache Prefetching ====
+When the cache uses one line, the pipeline gets the next cache line based in the spatial locality.
+
+===== Paralellism within single processors =====
+
+==== Pipelining ====
+Laundry example where washing takes 30 minutes, drying 20 minutes and folding 20 minutes, what does a total of 90 minuts. If we do the sequential execution 4 times, it takes 6 hours, but if we pipeline it, it takes only 3.5 hours
+{{.\pasted_image006.png}}
+In this example the latency is 90 minutes. The bandwidth is the number of loads per hours
+* Without pipeline: 4 loads / 6 hours = 2/3
+* With pipeline: 4 loads / 3.5 hours = 2/1.75
+Pipelining helps the bandwitdh but not the latency.
+
+===== Case study: Matrix multiplication =====
+Matrices are 2D array of elements, but memory addresses are 1D. The convention is to use "Column major" or "Row major"
+
+{{.\pasted_image007.png}}
+
+Assuming there are 2 levels in the hierarchy of memory and all the data is initially in slow memory
+* m is the number of memory elements ( words ) moved between fast and slow memory
+* tm is the time per slow memory operation
+* f is the number of arithmetic operations
+* tf is the time per arithmetic operation
+* q = f/m average number of flops per slow memory access → This is the computational intensity, the key to algorithm efficiency
+
+The minumum possible time is f * tf, when all the data is in fast memory
+The actual time
+
+* f * tf + m * tm = f * tf * ( 1 + tm  [[/ tf]]  * 1/q )  → tm / tf is the machine balance
+
+Larger q means time closer to minumum f * tf
+q >= tm / tf in order to get at least half of peak speed
+
+==== Warmup: Matrix-vector multiplication ====
+Assuming that:
+* fast memory is large enough to hold three vectors
+* parallelism in  the processor
+* the cost of a fast memory access is 0
+* memory latency is constant
+
+{{{code: lang="python" linenumbers="True"
+# read x[1][n] into fast memory
+# read y[1][n] into fast memory
+for i in range(1, n):
+	# read row i of A into fast memory 
+	for j in range(1, n):
+		y[i] = y[i] + A[i][j] * x[j]
+		# write y[1][n] back to slow memory
+}}}
+
+{{.\pasted_image008.png}}
+* m = number of slow memory (words) refs =3n + n^2 
+	* n^2 to read each row ( cell ) of A once
+	* 3n to read and write each cell of Y once and to read each cell of X once
+* f ( number of arithmetic operations) = 2n^2
+* → q = f/m ~ 2
+
+==== Naive Matrix multiply ====
+{{.\pasted_image010.png}}
+{{{code: lang="python" linenumbers="True"
+for i in range(1, n):
+	# read row i of A into fast memory
+	for j in range(1, n):
+		# read c[i][j] into fast memory
+		# read column jo of B into fast memory
+		for k in range(1, n):
+			c[i][j] = c[i][j] + A[i][k] * B[k][j]
+			# write c[i][j] back to slow memory
+}}}
+
+* f = 2*n^3
+* m =  n^3 + 2n^2 
+	* n^3 to read each (cell) column of B n^2 times
+	* n^2 to read each row (cell) of A once for each i, but n^3 is higher so we do not use this value
+	* 2n^2 to read and write each element of C once
+
+So q = f / m  = 2n^3 / (n^3 + 3n^2) ~2 for larges n
+
