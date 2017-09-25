@@ -1,8 +1,0 @@
-Content-Type: text/x-zim-wiki
-Wiki-Format: zim 0.4
-Creation-Date: 2017-09-13T08:19:12+02:00
-
-====== class 4 ======
-Created Wednesday 13 September 2017
-
-===== change of coordinates system =====

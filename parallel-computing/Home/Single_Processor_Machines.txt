@@ -103,10 +103,10 @@ Assuming there are 2 levels in the hierarchy of memory and all the data is initi
 * tf is the time per arithmetic operation
 * q = f/m average number of flops per slow memory access → This is the computational intensity, the key to algorithm efficiency
 
-The minumum possible time is f * tf, when all the data is in fast memory
-The actual time
+The minumum possible time is f * tf (float operations by time per float operation), when all the data is in fast memory
+The actual time, but we do not always have everything in fast memory, so we have to add m * tm ( memory accesses by time per memory access)
 
-* f * tf + m * tm = f * tf * ( 1 + tm  [[/ tf]]  * 1/q )  → tm / tf is the machine balance
+* __f * tf + m * tm__ = f * tf * ( 1 + tm  [[/ tf]]  * 1/q )  → tm / tf is the machine balance
 
 Larger q means time closer to minumum f * tf
 q >= tm / tf in order to get at least half of peak speed

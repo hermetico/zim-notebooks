@@ -1,0 +1,306 @@
+Content-Type: text/x-zim-wiki
+Wiki-Format: zim 0.4
+Creation-Date: 2017-09-14T16:47:25+02:00
+
+====== 2. Transformations ======
+Created Thursday 14 September 2017
+
+===== Chapter 4 =====
+**Transformation, Animation and Viewing**
+
+==== 4.1 Modeling Transformations ====
+Translation, scaling and rotation are applied to objects in order to change their location and shape.
+
+=== 4.1.1 Translation ===
+The function glTranslate(x,y,z); translates and object x,y,z units. Each point of the object is mapped in that direction as shown in Figure 4.2
+Precisely, each point (x,y,z) of the object is mapped to the point (x + p, y + q, z + r)
+{{.\pasted_image.png}}
+The matrices for the translation are the next ones, 4 dimensional matrices, where the last column is [x, y, z, 1]
+{{.\pasted_image004.png}}
+
+=== 4.1.2 Scaling ===
+The scaling command glScalef(u, v, w) maps each point (x,y,z) to the point(ux, vy, wz)
+
+{{.\pasted_image001.png}}
+
+=== 4.1.3 Rotation ===
+The rotation command glRotatef(A, p, q, r) rotates each point of an object about an axis from the origin O = (0,0,0) to the point (p,q,r). The amount of rotation is Aº, measured counter-clockwise.
+The idea is like rotating a point P turning along a cylinder on the specified axis
+{{.\pasted_image002.png}}
+{{{code: lang="cg" linenumbers="True"
+/// Experiment 4.7
+// 60º z axis clockwise
+glRotatef(60, 0, 0, -1);
+
+// -60º z axis counterclockwise:
+// resulting in  the same as thre previous
+glRotatef(-60, 0, 0, 1);
+
+// 60º x axis counterclockwise
+glRotatef(60, 1, 0, 0);
+
+// 60º y axis counterclockwise
+glRotatef(60, 0, 1, 0);
+
+// 60º x and z axes counterclockwise
+glRotatef(60, 1, 0, 1);
+}}}
+
+
+==== 4.2 Composing modeling transformations ====
+Opengl maintains a 4x4 modelview matrix, M, initialized to the identity
+{{.\pasted_image003.png}}
+As the drawing routine is processed during runtime, the matrix of each succesive modeling transformation encounteres is multiplied from the left by the current modelview matrix
+Initial  =I → identity
+1. transformation 1 →  M = I*M1 = M1
+2. transformation 2 → M = M1 * M2
+3. transformation 3 → M = M1 * M2 * M3
+
+==== 4.3 Placing multiple objects ====
+{{{code: lang="cg" linenumbers="True"
+/// Experiment 4.10
+void drawScene(void)
+{
+	glClear(GL_COLOR_BUFFER_BIT);
+	glColor3f(0.0, 0.0, 0.0);
+	glLoadIdentity();
+	// Modeling transformations.
+	glTranslatef(0.0, 0.0, -15.0);
+	// glRotatef(45.0, 0.0, 0.0, 1.0);
+	glTranslatef(5.0, 0.0, 0.0);
+	glutWireCube(5.0); // Box.
+	//More modeling transformations.
+	glTranslatef(0.0, 10.0, 0.0);
+	glutWireSphere(2.0, 10, 8); // Sphere.
+
+	glFlush();
+	
+}
+}}}
+
+{{.\pasted_image005.png}}
+In this experiment we see that the sphere is lookated 10 units avobe the cube. 
+The transformations are applied backwards from the object creation, so when creating a cube, there are 2 translations that are applied previously. Then, when creating a sphere, there is one more translation, ( the one between creating the cube and the sphere), so that, the sphere is moved 1o units in the y axis.
+
+==== 4.4 Modelview matrix Stack and isolating transformations ====
+The modelview matrix, which we modify with modeling transformations,  is the topmost matrix of an stack, the modelview matrix stack. Opengl mantains 3 different  matrix stacks:
+* modelview
+* projection
+* texture
+
+The command
+{{{code: lang="cg" linenumbers="True"
+ // model = GL_MODELVIEW or GL_PROJECTION, GL_TEXTURE
+glMatrixMode( model ); 
+}}}
+
+determines which stack is currently active.
+
+{{{code: lang="cg" linenumbers="True"
+/// Experiment 4.14
+void drawScene(void)
+{
+	glClear(GL_COLOR_BUFFER_BIT);
+	glColor3f(0.0, 0.0, 0.0);
+	glLoadIdentity();
+	// Modeling transformations.
+	glTranslatef(0.0, 0.0, -15.0);
+	glScalef(1, 2, 1); // the scale affects to the sphere too
+	glutWireCube(5.0); // torso
+	glTranslatef(0.0, 7.0, 0.0);
+	glutWireSphere(2.0, 10, 8); // Spherical head
+
+	glFlush();
+	
+}
+}}}
+
+We can see in Figure 4.19 that the sphere is not over the box, but a bit more higher. This is because the scale function is affecting it too.
+{{.\pasted_image006.png}}
+A solution is to isolate the scaling by placing it within a push-pop pair as shown below
+{{{code: lang="cg" linenumbers="True"
+/// Experiment 4.14 b
+void drawScene(void)
+{
+	glClear(GL_COLOR_BUFFER_BIT);
+	glColor3f(0.0, 0.0, 0.0);
+	glLoadIdentity();
+	
+
+	glTranslatef(0.0, 0.0, -15.0);
+
+	glPushMatrix();
+	glScalef(1, 2, 1); 
+	glutWireCube(5.0); // torso
+	glPopMatrix();
+	
+	glTranslatef(0.0, 7.0, 0.0);
+	glutWireSphere(2.0, 10, 8); // Spherical head
+
+	glFlush();
+	
+}
+}}}
+
+What we are doing here is isolating the changes of the wired cube by using the push and pop functions
+{{.\pasted_image007.png}}
+glPushMatrix() makes a copy of the current topmost model view in the matrix stack,  a puts it in the top. Thus, the first and the second matrices are equal, the following glscale and wirecube functions, affect the matrix which is in the top, so only the first one is affected. 
+When executing popMatrix, the first matrix is extracted from the stack and the second one is moved to the first position.
+
+{{{code: lang="cg" linenumbers="True"
+/// Exercice 4.16
+glPushMatrix();
+
+glTranslatef(2, 0, 0);
+glutWireSphere(2, 10, 8);
+
+glPushMatrix();
+glScalef(2, 2, 2);
+glutWireSphere(2, 10, 8);
+glPopMatrix();
+
+glPushMatrix();
+glRotatef(90, 1, 0, 0);
+glTranslatef(0, 0, 4);
+glutWireSphere(2, 10, 8);
+glPopMatrix();
+
+glTranslatef(0, 4, 0);
+glutWireSphere(2, 10, 8);
+glPopMatrix();
+}}}
+
+
+==== 4.5 Animation ====
+Animatino in computer graphics is a sequence of still frames.
+
+=== 4.5.1 Animation technicals ===
+
+== Controlling animation ==
+Opengl provides three different methods to control animation
+1. via keyboard or mouse input
+{{{code: lang="cg" linenumbers="True"
+void increaseAngle(void)
+{
+   angle += 5.0;
+   if (angle > 360.0) angle -= 360.0;
+   glutPostRedisplay();
+}
+
+// Keyboard input processing routine.
+void keyInput(unsigned char key, int x, int y)
+{
+   switch(key) 
+   {
+	  case 27:
+		 exit(0);
+		 break;
+	  case ' ': 
+		 increaseAngle();
+		 break;
+	  default:
+		 break;
+   }
+}
+}}}
+
+
+2. Automatically by specifying a function //idle_function//
+{{{code: lang="cg" linenumbers="True"
+void increaseAngle(void)
+{
+   angle += 5.0;
+   if (angle > 360.0) angle -= 360.0;
+   glutPostRedisplay();
+}
+
+// Keyboard input processing routine.
+void keyInput(unsigned char key, int x, int y)
+{
+   switch(key) 
+   {
+	  case 27:
+		 exit(0);
+		 break;
+	  case ' ':
+		 if(isAnimate) 
+		 {
+			isAnimate = 0;
+			glutIdleFunc(NULL);
+		 }
+		 else 
+		 {
+			isAnimate = 1;
+			glutIdleFunc(increaseAngle);
+		 }
+		 break;
+	  default:
+		 break;
+   }
+}
+}}}
+
+
+3. Automatically by specifying a routine //timer_function//
+
+{{{code: lang="cg" linenumbers="True"
+// Routine to increase the rotation angle.
+void increaseAngle(void)
+{
+   angle += 5.0;
+   if (angle > 360.0) angle -= 360.0;
+}
+
+// Routine to animate with a recursive call made after animationPeriod msecs.
+void animate(int value)
+{
+   if (isAnimate) 
+   {
+	  increaseAngle();
+
+	  glutPostRedisplay();
+	  glutTimerFunc(animationPeriod, animate, 1);
+   }
+}
+
+// Keyboard input processing routine.
+void keyInput(unsigned char key, int x, int y)
+{
+   switch(key) 
+   {
+	  case 27:
+		 exit(0);
+		 break;
+	  case ' ': 
+		 if (isAnimate) isAnimate = 0;
+		 else 
+		 {
+			isAnimate = 1; 
+			animate(1);
+		 }
+		 break;
+	  default:
+		 break;
+   }
+}
+
+// Callback routine for non-ASCII key entry.
+void specialKeyInput(int key, int x, int y)
+{
+   if (key == GLUT_KEY_DOWN) animationPeriod +=5;
+   if( key == GLUT_KEY_UP) 
+	  if (animationPeriod > 5) animationPeriod -=5;
+   glutPostRedisplay();
+}
+
+}}}
+
+
+
+Redrawing the scene takes some minimum amount of time, depending on its complexity and the speed of the processor or grapchics card
+
+== Double buffering ==
+Opengl provides 2 buffers, //viewable buffer //and //drawable buffer//. The first one displays the current frame while the next frame is being frawn in the second buffer.
+{{.\pasted_image009.png}}
+
+=== 4.5.2 Animation code ===

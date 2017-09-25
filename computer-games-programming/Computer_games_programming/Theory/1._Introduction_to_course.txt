@@ -2,12 +2,12 @@ Content-Type: text/x-zim-wiki
 Wiki-Format: zim 0.4
 Creation-Date: 2017-09-14T16:21:31+02:00
 
-====== Chapter 2 ======
+====== 1. Introduction to course ======
 Created Thursday 14 September 2017
 **On To OpenGL and 3D Computer Graphics**
 
 We are going to gain insight into
-* The synthetic-camera model to record 3D scenes which [[OpenGL]] implements
+* The synthetic-camera model to record 3D scenes which OpenGL implements
 * The approach to approximating curved objects, such as circles ans spheres with the help of straight and flat geometric primitives, such as line segments and triangles, which is fundamental to object design in computer graphics
 
 ==== 2.1 First program ====
@@ -23,7 +23,7 @@ The following statements create the square
    glEnd();
 }}}
 
-But those are legacy code, even though they can be accesed from [[OpenGL]] 4.3 via the compatibility profile.
+But those are legacy code, even though they can be accesed from OpenGL 4.3 via the compatibility profile.
 The corners of the square are specified by the four vertex declaration statements between glBegin and glEnd.
 
 In the example, the axes are oriented as in the picture
@@ -53,12 +53,12 @@ glOrtho(0.0, 100.0, 0.0, 100.0, -1.0, 1.0);
 (left, bottom, -near), (right, bottom, -near), (left, top, -near), (right, top, -near), (left, bottom, -far), (right, bottom, -far),
 (left, top,- far), (right, top,- far)
 {{.\pasted_image001.png}}
-In [[OpenGL,]] the near and far values are flipped in sign.
+In OpenGL, the near and far values are flipped in sign.
 Now, that we understand what glOrtho does, it is possible to show how the square is represented inside the viewing box, using the figure 2.6
 {{.\pasted_image002.png}}
 The rendering process takes 2 steps
 1. **Shoot: **Objects are projected perpendicularly onto the front face of the viewing box as in figure 2.6(b). The fron t face of the viewing box is called **viewing face** and the plane on which it lies the **viewing plane. **
-2. **Print:** The viewing face is proportionately scaled to fit the regular [[OpenGL]] window. This is like printing the film on paper
+2. **Print:** The viewing face is proportionately scaled to fit the regular OpenGL window. This is like printing the film on paper
 {{.\pasted_image003.png}}
 So, changing the aspect ration in the function gluInitWindowSize → will actually change the shape of our square as it is shown in the figure 2.7
 
@@ -148,7 +148,7 @@ The resultant square shines like this one
 {{.\pasted_image008.png}}
 
 ==== 2.6 OpenGL geometric primitives ====
-Other primitives in [[OpenGL]] are for example points, using the following code
+Other primitives in OpenGL are for example points, using the following code
 {{{code: lang="glsl" linenumbers="True"
    glPointSize(5.0);
    glBegin(GL_POINTS);

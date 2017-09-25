@@ -1,0 +1,24 @@
+Content-Type: text/x-zim-wiki
+Wiki-Format: zim 0.4
+Creation-Date: 2017-09-18T16:08:51+02:00
+
+====== exercices ======
+Created Monday 18 September 2017
+
+* try  to compile atlas library and run the code
+	* https://gist.github.com/rmcgibbo/6317607
+
+documentation http://www.nersc.gov/users/computational-systems/edison/
+
+connect to the login node, do not execute anything here
+ssh username@edison.nersc.gov	// cori.nersc.gov
+in order to execute, we need to submit a chop
+
+we can connect to a specified node just for us, and run our code
+salloc  -N 1 -p debug -L SCRATCH       → pick one core to work
+
+MPI standard → openmpi is an implementation
+
+* -msse[2-4] for compiling
+* -avx for compiling in knight landing cpu's
+

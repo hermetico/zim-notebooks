@@ -1,0 +1,14 @@
+Content-Type: text/x-zim-wiki
+Wiki-Format: zim 0.4
+Creation-Date: 2017-09-18T21:12:19+02:00
+
+====== databases ======
+Created Monday 18 September 2017
+
+start mysql using
+{{{code: lang="sh" linenumbers="True"
+
+>> mysql -u root -p 
+Enter password:
+
+}}}
